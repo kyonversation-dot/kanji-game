@@ -1,0 +1,494 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: #e8f4fd;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ======= 画面切り替え ======= */
+.screen { width: 100%; height: 100vh; }
+.hidden { display: none !important; }
+
+/* ======= 参加画面 ======= */
+#join-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.join-card {
+  background: white;
+  border-radius: 24px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  width: min(360px, 90vw);
+}
+
+.game-title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #5c4bc2;
+  margin-bottom: 8px;
+}
+
+.join-desc {
+  color: #888;
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
+#name-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 1.2rem;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+#name-input:focus { border-color: #667eea; }
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 32px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:active { transform: scale(0.97); }
+
+/* ======= ゲーム画面 ======= */
+#game-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.game-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ヘッダー */
+.game-header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  flex-shrink: 0;
+}
+
+.status-text {
+  font-size: 0.95rem;
+  font-weight: bold;
+  flex: 1;
+}
+
+.timer {
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.timer.urgent { background: #ff6b6b; animation: pulse 0.5s infinite alternate; }
+@keyframes pulse { to { transform: scale(1.1); } }
+
+/* メインレイアウト */
+.game-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* ======= キャンバスエリア ======= */
+.canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.word-display {
+  background: #fff9c4;
+  border: 2px solid #ffd43b;
+  border-radius: 12px;
+  padding: 8px 20px;
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+.word-label {
+  font-size: 0.85rem;
+  color: #888;
+  margin-right: 4px;
+}
+
+.word-text {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #e67700;
+  letter-spacing: 4px;
+}
+
+.char-hint {
+  color: #888;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* キャンバス */
+.canvas-wrapper {
+  width: 100%;
+  max-width: 500px;
+  flex: 1;
+  position: relative;
+  touch-action: none;
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  background: white;
+  border-radius: 16px;
+  border: 3px solid #dee2e6;
+  cursor: crosshair;
+  display: block;
+  touch-action: none;
+}
+
+/* 描画ツール */
+.drawing-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  flex-wrap: wrap;
+}
+
+.color-palette {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.color-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-btn:hover { transform: scale(1.1); }
+.color-btn.active { border-color: #495057; transform: scale(1.15); }
+.eraser-btn { background: #f8f9fa !important; border-color: #dee2e6; }
+.eraser-btn.active { border-color: #495057; }
+
+.btn-danger {
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-danger:hover { opacity: 0.85; }
+
+/* 答え入力 */
+.guess-area {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+#guess-input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1rem;
+  border: 2px solid #dee2e6;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#guess-input:focus { border-color: #667eea; }
+
+#guess-btn {
+  padding: 12px 20px;
+  white-space: nowrap;
+}
+
+/* ======= サイドバー ======= */
+.sidebar {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #dee2e6;
+  background: white;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-section {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.chat-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: none;
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #868e96;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* プレイヤーリスト */
+.player-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 0.9rem;
+  gap: 6px;
+}
+
+.player-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-score {
+  font-weight: bold;
+  color: #667eea;
+  min-width: 28px;
+  text-align: right;
+}
+
+.player-item.is-drawer .player-name::before {
+  content: '✏️ ';
+}
+
+/* チャット */
+#chat-log {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-msg {
+  line-height: 1.3;
+  padding: 2px 0;
+  word-break: break-all;
+}
+
+.chat-msg .chat-name {
+  font-weight: bold;
+  color: #5c4bc2;
+}
+
+.chat-msg.system-msg {
+  color: #aaa;
+  font-style: italic;
+  font-size: 0.78rem;
+}
+
+/* ======= オーバーレイ ======= */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.overlay-card {
+  background: white;
+  border-radius: 24px;
+  padding: 36px 40px;
+  text-align: center;
+  max-width: min(400px, 90vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.overlay-emoji  { font-size: 3.5rem; margin-bottom: 12px; }
+.overlay-title  { font-size: 1.5rem; font-weight: bold; margin-bottom: 8px; }
+.overlay-word   { font-size: 2.5rem; font-weight: bold; color: #e67700; margin: 12px 0; letter-spacing: 4px; }
+.overlay-reading{ font-size: 1rem; color: #888; margin-bottom: 16px; }
+.overlay-winner { font-size: 1rem; color: #5c4bc2; font-weight: bold; margin-bottom: 16px; }
+.overlay-countdown { margin-top: 16px; color: #aaa; font-size: 0.9rem; }
+
+/* ======= 今週の漢字パネル ======= */
+.custom-words-section {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 16px;
+}
+
+.custom-toggle {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 4px 0;
+  font-weight: bold;
+}
+
+.custom-toggle:hover { text-decoration: underline; }
+
+.custom-panel {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.custom-desc {
+  font-size: 0.82rem;
+  color: #888;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.custom-desc code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.85em;
+}
+
+.custom-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  outline: none;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  line-height: 1.6;
+}
+
+.custom-input:focus { border-color: #667eea; }
+
+.custom-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-small { padding: 8px 18px; font-size: 0.9rem; width: auto; }
+
+.btn-outline {
+  background: none;
+  border: 2px solid #dee2e6;
+  color: #868e96;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 18px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-outline:hover { border-color: #aaa; color: #555; }
+
+.custom-status {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  min-height: 20px;
+  font-weight: bold;
+}
+
+.custom-status.ok  { color: #2f9e44; }
+.custom-status.off { color: #868e96; }
+
+/* ヘッダーのバッジ */
+.custom-badge {
+  background: rgba(255,255,255,0.25);
+  border-radius: 10px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+/* ======= モバイル対応 ======= */
+@media (max-width: 600px) {
+  .sidebar { display: none; }
+
+  .game-header { min-height: 44px; }
+  .status-text { font-size: 0.85rem; }
+
+  .word-text { font-size: 1.6rem; }
+
+  .canvas-area { padding: 6px; gap: 6px; }
+
+  .color-btn { width: 32px; height: 32px; }
+}

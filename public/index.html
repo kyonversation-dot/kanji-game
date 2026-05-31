@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>✏️ 漢字ゲーム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 参加画面 -->
+  <div id="join-screen" class="screen">
+    <div class="join-card">
+      <div class="game-title">✏️ 漢字ゲーム</div>
+      <p class="join-desc">なまえを入れてね！</p>
+      <input type="text" id="name-input" placeholder="なまえ" maxlength="10" autocomplete="off">
+      <button id="join-btn" class="btn-primary">はじめる！</button>
+
+      <!-- 今週の漢字設定 -->
+      <div class="custom-words-section">
+        <button id="custom-toggle" class="custom-toggle">
+          📝 今週の漢字を設定する ▼
+        </button>
+        <div id="custom-panel" class="custom-panel hidden">
+          <p class="custom-desc">
+            1行に1つ漢字を入れてね。<br>
+            読み方も入れるときは <code>山 やま</code> のように書いてね。
+          </p>
+          <textarea id="custom-input" class="custom-input" rows="6"
+            placeholder="例：&#10;山&#10;川 かわ&#10;電車 でんしゃ"></textarea>
+          <div class="custom-buttons">
+            <button id="custom-set-btn" class="btn-primary btn-small">設定する</button>
+            <button id="custom-clear-btn" class="btn-outline btn-small">リセット</button>
+          </div>
+          <div id="custom-status" class="custom-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ゲーム画面 -->
+  <div id="game-screen" class="screen hidden">
+    <div class="game-layout">
+
+      <!-- ヘッダー -->
+      <div class="game-header">
+        <div id="status-text" class="status-text">まっています...</div>
+        <div id="custom-badge" class="custom-badge hidden">📝 カスタム</div>
+        <div id="timer" class="timer hidden">60</div>
+      </div>
+
+      <!-- メインエリア -->
+      <div class="game-main">
+
+        <!-- キャンバスエリア -->
+        <div class="canvas-area">
+          <!-- お題表示（描く人用） -->
+          <div id="word-display" class="word-display hidden">
+            <span class="word-label">お題：</span>
+            <span id="word-text" class="word-text"></span>
+          </div>
+          <!-- 文字数ヒント（当てる人用） -->
+          <div id="char-hint" class="char-hint hidden"></div>
+
+          <!-- キャンバス -->
+          <div class="canvas-wrapper">
+            <canvas id="game-canvas"></canvas>
+          </div>
+
+          <!-- 描画ツール（描く人用） -->
+          <div id="drawing-tools" class="drawing-tools hidden">
+            <div class="color-palette">
+              <button class="color-btn active" data-color="#111111" style="background:#111111" title="黒"></button>
+              <button class="color-btn" data-color="#e03131" style="background:#e03131" title="赤"></button>
+              <button class="color-btn" data-color="#1971c2" style="background:#1971c2" title="青"></button>
+              <button class="color-btn" data-color="#2f9e44" style="background:#2f9e44" title="緑"></button>
+              <button class="color-btn eraser-btn" data-color="eraser" title="けしごむ">🧽</button>
+            </div>
+            <button id="clear-btn" class="btn-danger">クリア</button>
+          </div>
+
+          <!-- 答え入力（当てる人用） -->
+          <div id="guess-area" class="guess-area hidden">
+            <input type="text" id="guess-input" placeholder="こたえを入れてね..." maxlength="20" autocomplete="off">
+            <button id="guess-btn" class="btn-primary">送る</button>
+          </div>
+        </div>
+
+        <!-- サイドバー -->
+        <div class="sidebar">
+          <div class="sidebar-section">
+            <div class="section-title">👥 プレイヤー</div>
+            <div id="player-list"></div>
+          </div>
+          <div class="sidebar-section chat-section">
+            <div class="section-title">💬 チャット</div>
+            <div id="chat-log"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ラウンド終了オーバーレイ -->
+  <div id="round-overlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div id="overlay-content"></div>
+      <div id="overlay-countdown" class="overlay-countdown"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

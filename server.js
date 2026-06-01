@@ -161,7 +161,8 @@ io.on('connection', (socket) => {
     if (socket.id === getDrawerId()) return;
 
     const playerName = state.players[socket.id]?.name || '?';
-    io.emit('chat', { name: playerName, text: text.trim() });
+    // 答えはチャットに出さない。「○○が答えました」だけ全員に見せる
+    io.emit('chat', { system: true, text: `${playerName} が答えました` });
 
     if (checkGuess(text)) {
       const drawerId = getDrawerId();
@@ -169,6 +170,7 @@ io.on('connection', (socket) => {
       if (drawerId && state.players[drawerId]) {
         state.players[drawerId].score += 1;
       }
+      io.emit('playerList', getPlayerList());
       io.emit('correctGuess', { name: playerName });
       endRound(socket.id);
     }

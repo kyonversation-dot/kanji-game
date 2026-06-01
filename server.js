@@ -50,7 +50,7 @@ function getWordForRound() {
   return getRandomWord();
 }
 
-const ROUND_TIME = 60;      // 1ラウンドの秒数
+const ROUND_TIME = 50;      // 1ラウンドの秒数
 const ROUND_END_WAIT = 5000; // ラウンド終了後の待機時間(ms)
 
 function getDrawerId() {

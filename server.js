@@ -24,6 +24,9 @@ const state = {
   timer: null,
   timeLeft: 0,
   customWords: [],  // 今週の漢字リスト（空のときはランダム）
+  lastWordKanji: null, // 直前の漢字（連続防止）
+  timerStarted: false, // タイマーが始まったか
+  startTimeout: null,  // 自動スタート用タイムアウト
 };
 
 // カスタムリストの文字列をパース
@@ -45,9 +48,28 @@ function parseCustomWords(text) {
 }
 
 function getWordForRound() {
-  const list = state.customWords.length > 0 ? state.customWords : null;
-  if (list) return list[Math.floor(Math.random() * list.length)];
-  return getRandomWord();
+  const list = state.customWords.length > 0 ? state.customWords : getAllWords();
+  if (list.length === 1) return list[0];
+  let word, attempts = 0;
+  do {
+    word = list[Math.floor(Math.random() * list.length)];
+    attempts++;
+  } while (word.kanji === state.lastWordKanji && attempts < 10);
+  state.lastWordKanji = word.kanji;
+  return word;
+}
+
+function beginTimer() {
+  if (state.phase !== 'drawing' || state.timerStarted) return;
+  state.timerStarted = true;
+  clearTimeout(state.startTimeout);
+  state.timeLeft = ROUND_TIME;
+  io.emit('timerStarted', { timeLeft: ROUND_TIME });
+  state.timer = setInterval(() => {
+    state.timeLeft--;
+    io.emit('tick', { timeLeft: state.timeLeft });
+    if (state.timeLeft <= 0) endRound(null);
+  }, 1000);
 }
 
 const ROUND_TIME = 50;      // 1ラウンドの秒数
@@ -74,8 +96,8 @@ function startRound() {
   }
 
   state.phase = 'drawing';
+  state.timerStarted = false;
   state.currentWord = getWordForRound();
-  state.timeLeft = ROUND_TIME;
   const drawerId = getDrawerId();
 
   io.emit('clearCanvas');
@@ -90,17 +112,13 @@ function startRound() {
   const displayWord = state.currentWord.readings[0] || state.currentWord.kanji;
   io.to(drawerId).emit('yourWord', { word: displayWord });
 
-  state.timer = setInterval(() => {
-    state.timeLeft--;
-    io.emit('tick', { timeLeft: state.timeLeft });
-    if (state.timeLeft <= 0) {
-      endRound(null);
-    }
-  }, 1000);
+  // 10秒後に描く人がボタンを押さなくても自動でタイマー開始
+  state.startTimeout = setTimeout(beginTimer, 10000);
 }
 
 function endRound(winnerId) {
   clearInterval(state.timer);
+  clearTimeout(state.startTimeout);
   state.phase = 'roundEnd';
 
   io.emit('roundEnd', {
@@ -179,6 +197,10 @@ io.on('connection', (socket) => {
       io.emit('correctGuess', { name: playerName, points });
       endRound(socket.id);
     }
+  });
+
+  socket.on('startDrawing', () => {
+    if (socket.id === getDrawerId()) beginTimer();
   });
 
   socket.on('setCustomWords', ({ text }) => {

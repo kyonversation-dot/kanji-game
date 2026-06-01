@@ -1,4 +1,5 @@
 const socket = io();
+const ROUND_TIME = 50;
 
 // ======= 状態 =======
 let mySocketId = null;
@@ -273,8 +274,8 @@ socket.on('waiting', () => {
 socket.on('roundStart', (data) => {
   drawerId = data.drawerId;
   roundOverlay.classList.add('hidden');
-  timerEl.classList.remove('hidden');
-  timerEl.textContent = data.timeLeft;
+  timerEl.classList.add('hidden'); // ボタンを押すまで非表示
+  timerEl.textContent = ROUND_TIME;
   timerEl.classList.remove('urgent');
   clearLocalCanvas();
 
@@ -297,6 +298,7 @@ socket.on('roundStart', (data) => {
 
 revealBtn.addEventListener('click', () => {
   wordRevealOverlay.classList.add('hidden');
+  socket.emit('startDrawing'); // ここからタイマースタート
 });
 
 socket.on('yourWord', ({ word }) => {
@@ -314,6 +316,12 @@ socket.on('draw', (data) => {
 
 socket.on('clearCanvas', () => {
   clearLocalCanvas();
+});
+
+socket.on('timerStarted', ({ timeLeft }) => {
+  timerEl.classList.remove('hidden');
+  timerEl.textContent = timeLeft;
+  timerEl.classList.remove('urgent');
 });
 
 socket.on('tick', ({ timeLeft }) => {

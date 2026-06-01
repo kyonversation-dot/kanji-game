@@ -27,8 +27,9 @@ const mobileScoreBar   = document.getElementById('mobile-score-bar');
 
 const statusText    = document.getElementById('status-text');
 const timerEl       = document.getElementById('timer');
-const wordDisplay   = document.getElementById('word-display');
-const wordText      = document.getElementById('word-text');
+const wordDisplay    = document.getElementById('word-display');
+const wordText       = document.getElementById('word-text');
+const wordReadings   = document.getElementById('word-readings');
 const charHint      = document.getElementById('char-hint');
 const canvas        = document.getElementById('game-canvas');
 const ctx           = canvas.getContext('2d');
@@ -312,6 +313,12 @@ revealBtn.addEventListener('click', () => {
 socket.on('yourWord', ({ kanji, kunyomi, onyomi }) => {
   wordDisplay.classList.remove('hidden');
   wordText.textContent = kanji;
+
+  // お題欄に訓読み・音読みを表示（書きながら覚えられるように）
+  const parts = [];
+  if (kunyomi) parts.push(`<span>訓：${escHtml(kunyomi)}</span>`);
+  if (onyomi)  parts.push(`<span>音：${escHtml(onyomi)}</span>`);
+  wordReadings.innerHTML = parts.join('');
 
   const readingStr = [kunyomi, onyomi].filter(Boolean).join('・');
   statusText.textContent = `✏️ お題：${kanji}（${readingStr}）← 書いてね`;

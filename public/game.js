@@ -293,6 +293,8 @@ socket.on('roundStart', (data) => {
 socket.on('yourWord', ({ word }) => {
   wordDisplay.classList.remove('hidden');
   wordText.textContent = word;
+  // スマホでも必ず見えるようにヘッダーにも表示
+  statusText.textContent = `✏️ お題：${word}　← 書いてね！`;
 });
 
 socket.on('draw', (data) => {

@@ -294,7 +294,7 @@ socket.on('yourWord', ({ word }) => {
   wordDisplay.classList.remove('hidden');
   wordText.textContent = word;
   // スマホでも必ず見えるようにヘッダーにも表示
-  statusText.textContent = `✏️ お題：${word}　← 書いてね！`;
+  statusText.textContent = `✏️ お題：${word}　← 漢字で書いてね`;
 });
 
 socket.on('draw', (data) => {
@@ -316,8 +316,8 @@ socket.on('chat', (msg) => {
   addChat(msg);
 });
 
-socket.on('correctGuess', ({ name }) => {
-  addChat({ system: true, text: `🎉 ${name} が正解！` });
+socket.on('correctGuess', ({ name, points }) => {
+  addChat({ system: true, text: `🎉 ${name} が正解！ +${points}pt` });
 });
 
 socket.on('roundEnd', (data) => {
@@ -326,16 +326,23 @@ socket.on('roundEnd', (data) => {
   drawingTools.classList.add('hidden');
   guessArea.classList.add('hidden');
 
+  const scoreHtml = data.players
+    .sort((a, b) => b.score - a.score)
+    .map(p => `<div class="score-row"><span>${escHtml(p.name)}</span><span>${p.score}pt</span></div>`)
+    .join('');
+
   overlayContent.innerHTML = data.winnerId
     ? `<div class="overlay-emoji">🎉</div>
        <div class="overlay-title">正解！</div>
        <div class="overlay-word">${escHtml(data.word)}</div>
        <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>
-       <div class="overlay-winner">${escHtml(data.winnerName)} の勝ち！</div>`
+       <div class="overlay-winner">${escHtml(data.winnerName)} の勝ち！</div>
+       <div class="score-list">${scoreHtml}</div>`
     : `<div class="overlay-emoji">⏰</div>
        <div class="overlay-title">時間切れ！</div>
        <div class="overlay-word">${escHtml(data.word)}</div>
-       <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>`;
+       <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>
+       <div class="score-list">${scoreHtml}</div>`;
 
   roundOverlay.classList.remove('hidden');
 

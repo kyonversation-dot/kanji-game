@@ -86,8 +86,9 @@ function startRound() {
     charCount: state.currentWord.kanji.length,
   });
 
-  // お絵かき担当にだけ答えを送る
-  io.to(drawerId).emit('yourWord', { word: state.currentWord.kanji });
+  // お絵かき担当にだけ読み方（ひらがな）を送る
+  const displayWord = state.currentWord.readings[0] || state.currentWord.kanji;
+  io.to(drawerId).emit('yourWord', { word: displayWord });
 
   state.timer = setInterval(() => {
     state.timeLeft--;
@@ -166,12 +167,14 @@ io.on('connection', (socket) => {
 
     if (checkGuess(text)) {
       const drawerId = getDrawerId();
-      state.players[socket.id].score += 2;
+      // スピードボーナス：残り時間が多いほど高得点（1〜6pt）
+      const points = Math.max(1, Math.ceil(state.timeLeft / 10));
+      state.players[socket.id].score += points;
       if (drawerId && state.players[drawerId]) {
-        state.players[drawerId].score += 1;
+        state.players[drawerId].score += 2;
       }
       io.emit('playerList', getPlayerList());
-      io.emit('correctGuess', { name: playerName });
+      io.emit('correctGuess', { name: playerName, points });
       endRound(socket.id);
     }
   });

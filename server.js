@@ -105,7 +105,7 @@ function endRound(winnerId) {
 
   io.emit('roundEnd', {
     word: state.currentWord.kanji,
-    reading: state.currentWord.readings[0],
+    reading: state.currentWord.readings[0] || state.currentWord.kanji,
     winnerId,
     winnerName: winnerId ? state.players[winnerId]?.name : null,
     players: getPlayerList(),

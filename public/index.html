@@ -23,11 +23,10 @@
         </button>
         <div id="custom-panel" class="custom-panel hidden">
           <p class="custom-desc">
-            1行に1つ漢字を入れてね。<br>
-            読み方も入れるときは <code>山 やま</code> のように書いてね。
+            1行に1つ。スペースで区切って <code>漢字 訓読み 音読み</code> の順に入れてね。
           </p>
           <textarea id="custom-input" class="custom-input" rows="6"
-            placeholder="例：&#10;山&#10;川 かわ&#10;電車 でんしゃ"></textarea>
+            placeholder="例：&#10;山 やま サン&#10;川 かわ セン&#10;火 ひ カ&#10;学 まな・ぶ ガク"></textarea>
           <div class="custom-buttons">
             <button id="custom-set-btn" class="btn-primary btn-small">設定する</button>
             <button id="custom-clear-btn" class="btn-outline btn-small">リセット</button>
@@ -111,7 +110,9 @@
       <div class="overlay-emoji">✏️</div>
       <div class="overlay-title">あなたのお題</div>
       <div id="reveal-word" class="word-reveal-text"></div>
-      <div class="overlay-subtitle">↑ この読み方の漢字を書いてね！</div>
+      <div id="reveal-kunyomi" class="reveal-reading"></div>
+      <div id="reveal-onyomi" class="reveal-reading"></div>
+      <div class="overlay-subtitle" style="margin-top:8px;">↑ この漢字を書いてね！</div>
       <button id="reveal-btn" class="btn-primary" style="margin-top:16px;width:auto;padding:12px 32px;">書き始める！</button>
     </div>
   </div>

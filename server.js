@@ -29,20 +29,32 @@ const state = {
   startTimeout: null,  // 自動スタート用タイムアウト
 };
 
-// カスタムリストの文字列をパース
+// カタカナ→ひらがな変換
+function toHiragana(str) {
+  return str.replace(/[ァ-ヶ]/g, c =>
+    String.fromCharCode(c.charCodeAt(0) - 0x60)
+  );
+}
+
+// カスタムリストの文字列をパース（漢字 訓読み 音読み）
 function parseCustomWords(text) {
   return text
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)
     .map(line => {
-      const parts = line.split(/[\s　]+/); // 半角・全角スペースで分割
-      const kanji = parts[0];
-      const manualReadings = parts.slice(1).filter(r => r.length > 0);
-      const readings = manualReadings.length > 0
-        ? manualReadings
-        : (readingMap[kanji] || []);
-      return { kanji, readings };
+      const parts = line.split(/[\s　]+/);
+      const kanji    = parts[0] || '';
+      const kunyomi  = parts[1] || '';
+      const onyomi   = parts[2] || '';
+      // 正解判定用：全読みをひらがなで保持
+      const readings = [];
+      if (kunyomi) readings.push(toHiragana(kunyomi));
+      if (onyomi)  readings.push(toHiragana(onyomi));
+      if (readings.length === 0 && readingMap[kanji]) {
+        readings.push(...readingMap[kanji].map(toHiragana));
+      }
+      return { kanji, kunyomi, onyomi, readings };
     })
     .filter(w => w.kanji.length > 0);
 }
@@ -108,9 +120,12 @@ function startRound() {
     charCount: state.currentWord.kanji.length,
   });
 
-  // お絵かき担当にだけ読み方（ひらがな）を送る
-  const displayWord = state.currentWord.readings[0] || state.currentWord.kanji;
-  io.to(drawerId).emit('yourWord', { word: displayWord });
+  // お絵かき担当にだけ漢字・訓読み・音読みを送る
+  io.to(drawerId).emit('yourWord', {
+    kanji:   state.currentWord.kanji,
+    kunyomi: state.currentWord.kunyomi || (state.currentWord.readings[0] || ''),
+    onyomi:  state.currentWord.onyomi  || '',
+  });
 
   // 10秒後に描く人がボタンを押さなくても自動でタイマー開始
   state.startTimeout = setTimeout(beginTimer, 10000);
@@ -143,9 +158,11 @@ function endRound(winnerId) {
 
 function checkGuess(guess) {
   if (!state.currentWord || state.phase !== 'drawing') return false;
-  const g = guess.trim();
-  const matched = g === state.currentWord.kanji || state.currentWord.readings.includes(g);
-  console.log(`[GUESS] 入力:"${g}" 正解:"${state.currentWord.kanji}" 読み:${JSON.stringify(state.currentWord.readings)} 結果:${matched}`);
+  const g = toHiragana(guess.trim());
+  const kanji = state.currentWord.kanji;
+  const readings = (state.currentWord.readings || []).map(toHiragana);
+  const matched = g === kanji || readings.includes(g);
+  console.log(`[GUESS] 入力:"${g}" 正解:"${kanji}" 読み:${JSON.stringify(readings)} 結果:${matched}`);
   return matched;
 }
 

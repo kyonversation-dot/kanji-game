@@ -394,6 +394,19 @@ body {
 
 .overlay-subtitle { font-size: 0.9rem; color: #888; margin-top: 4px; }
 
+.reveal-reading {
+  font-size: 1rem;
+  color: #555;
+  margin: 2px 0;
+  min-height: 1.3em;
+}
+
+.reveal-reading .label {
+  font-size: 0.75rem;
+  color: #aaa;
+  margin-right: 6px;
+}
+
 .score-list {
   margin-top: 12px;
   border-top: 1px solid #eee;

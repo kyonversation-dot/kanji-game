@@ -44,6 +44,8 @@ const overlayContent    = document.getElementById('overlay-content');
 const overlayCountdown  = document.getElementById('overlay-countdown');
 const wordRevealOverlay = document.getElementById('word-reveal-overlay');
 const revealWord        = document.getElementById('reveal-word');
+const revealKunyomi     = document.getElementById('reveal-kunyomi');
+const revealOnyomi      = document.getElementById('reveal-onyomi');
 const revealBtn         = document.getElementById('reveal-btn');
 
 // ======= キャンバス初期化 =======
@@ -301,12 +303,19 @@ revealBtn.addEventListener('click', () => {
   socket.emit('startDrawing'); // ここからタイマースタート
 });
 
-socket.on('yourWord', ({ word }) => {
+socket.on('yourWord', ({ kanji, kunyomi, onyomi }) => {
   wordDisplay.classList.remove('hidden');
-  wordText.textContent = word;
-  statusText.textContent = `✏️ お題：${word}　← 漢字で書いてね`;
-  // 大きなポップアップでお題を表示（スマホでも確実に見える）
-  revealWord.textContent = word;
+  wordText.textContent = kanji;
+
+  const readingStr = [kunyomi, onyomi].filter(Boolean).join('・');
+  statusText.textContent = `✏️ お題：${kanji}（${readingStr}）← 書いてね`;
+
+  // ポップアップに漢字・訓読み・音読みを表示
+  revealWord.textContent = kanji;
+  revealKunyomi.innerHTML = kunyomi
+    ? `<span class="label">訓読み</span>${kunyomi}` : '';
+  revealOnyomi.innerHTML  = onyomi
+    ? `<span class="label">音読み</span>${onyomi}`  : '';
   wordRevealOverlay.classList.remove('hidden');
 });
 

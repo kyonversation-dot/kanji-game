@@ -508,16 +508,63 @@ body {
   white-space: nowrap;
 }
 
+/* ======= スコアバー（スマホ用） ======= */
+.mobile-score-bar {
+  display: none;
+  background: rgba(255,255,255,0.15);
+  padding: 4px 12px;
+  flex-shrink: 0;
+}
+
+.mobile-score-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.mobile-score-item .mscore {
+  background: rgba(255,255,255,0.3);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 0.75rem;
+}
+
 /* ======= モバイル対応 ======= */
 @media (max-width: 600px) {
   .sidebar { display: none; }
+  .mobile-score-bar { display: flex; flex-wrap: wrap; gap: 4px; }
 
-  .game-header { min-height: 44px; }
-  .status-text { font-size: 0.85rem; }
+  .game-header { min-height: 44px; padding: 6px 12px; }
+  .status-text { font-size: 0.8rem; }
 
-  .word-text { font-size: 1.6rem; }
+  /* タイマーを目立たせる */
+  .timer {
+    width: 40px;
+    height: 40px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
 
-  .canvas-area { padding: 6px; gap: 6px; }
+  .word-text { font-size: 1.4rem; }
+  .word-display { padding: 6px 12px; }
 
-  .color-btn { width: 32px; height: 32px; }
+  /* キャンバスを小さく固定 */
+  .canvas-area { padding: 4px; gap: 4px; }
+
+  .canvas-wrapper {
+    flex: none !important;
+    width: min(90vw, 300px);
+    height: min(90vw, 300px);
+  }
+
+  .color-btn { width: 30px; height: 30px; }
+  .btn-danger { padding: 6px 12px; font-size: 0.85rem; }
+
+  #guess-input { padding: 10px 12px; font-size: 0.95rem; }
+  #guess-btn { padding: 10px 14px; }
 }

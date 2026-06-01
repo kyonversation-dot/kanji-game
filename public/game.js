@@ -20,7 +20,8 @@ const customInput    = document.getElementById('custom-input');
 const customSetBtn   = document.getElementById('custom-set-btn');
 const customClearBtn = document.getElementById('custom-clear-btn');
 const customStatus   = document.getElementById('custom-status');
-const customBadge    = document.getElementById('custom-badge');
+const customBadge      = document.getElementById('custom-badge');
+const mobileScoreBar   = document.getElementById('mobile-score-bar');
 
 const statusText    = document.getElementById('status-text');
 const timerEl       = document.getElementById('timer');
@@ -371,6 +372,7 @@ socket.on('roundEnd', (data) => {
 });
 
 socket.on('playerList', (players) => {
+  // サイドバーのリスト
   playerList.innerHTML = '';
   players.forEach(p => {
     const el = document.createElement('div');
@@ -378,4 +380,8 @@ socket.on('playerList', (players) => {
     el.innerHTML = `<span class="player-name">${escHtml(p.name)}</span><span class="player-score">${p.score}pt</span>`;
     playerList.appendChild(el);
   });
+  // スマホ用スコアバー
+  mobileScoreBar.innerHTML = players
+    .map(p => `<div class="mobile-score-item">${p.id === drawerId ? '✏️ ' : ''}${escHtml(p.name)}<span class="mscore">${p.score}pt</span></div>`)
+    .join('');
 });

@@ -277,6 +277,7 @@ socket.on('waiting', () => {
 socket.on('roundStart', (data) => {
   drawerId = data.drawerId;
   roundOverlay.classList.add('hidden');
+  wordRevealOverlay.classList.add('hidden'); // 前のラウンドのお題を消す
   timerEl.classList.add('hidden'); // ボタンを押すまで非表示
   timerEl.textContent = ROUND_TIME;
   timerEl.classList.remove('urgent');

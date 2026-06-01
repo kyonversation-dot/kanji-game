@@ -134,6 +134,7 @@ function startRound() {
 }
 
 function endRound(reason) {
+  if (state.phase !== 'drawing') return; // 二重呼び出し防止
   clearInterval(state.timer);
   clearTimeout(state.startTimeout);
   state.phase = 'roundEnd';

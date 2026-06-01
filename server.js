@@ -126,7 +126,9 @@ function endRound(winnerId) {
 function checkGuess(guess) {
   if (!state.currentWord || state.phase !== 'drawing') return false;
   const g = guess.trim();
-  return g === state.currentWord.kanji || state.currentWord.readings.includes(g);
+  const matched = g === state.currentWord.kanji || state.currentWord.readings.includes(g);
+  console.log(`[GUESS] 入力:"${g}" 正解:"${state.currentWord.kanji}" 読み:${JSON.stringify(state.currentWord.readings)} 結果:${matched}`);
+  return matched;
 }
 
 io.on('connection', (socket) => {

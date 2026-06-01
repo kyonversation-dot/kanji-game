@@ -4,6 +4,7 @@ const ROUND_TIME = 50;
 // ======= 状態 =======
 let mySocketId = null;
 let drawerId = null;
+let myGuessedCorrectly = false;
 let currentColor = '#111111';
 let brushSize = 8;
 let isDrawing = false;
@@ -294,6 +295,10 @@ socket.on('roundStart', (data) => {
     charHint.textContent = `文字数：${'○'.repeat(data.charCount)}`;
     drawingTools.classList.add('hidden');
     guessArea.classList.remove('hidden');
+    myGuessedCorrectly = false;
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    guessInput.placeholder = 'こたえを入れてね...';
     guessInput.focus();
   }
 });
@@ -348,6 +353,14 @@ socket.on('correctGuess', ({ name, points }) => {
   addChat({ system: true, text: `🎉 ${name} が正解！ +${points}pt` });
 });
 
+socket.on('yourGuessCorrect', ({ points }) => {
+  myGuessedCorrectly = true;
+  guessInput.disabled = true;
+  guessInput.value = '';
+  guessInput.placeholder = `✅ 正解！ +${points}pt`;
+  guessBtn.disabled = true;
+});
+
 socket.on('roundEnd', (data) => {
   timerEl.classList.add('hidden');
   wordDisplay.classList.add('hidden');
@@ -359,18 +372,13 @@ socket.on('roundEnd', (data) => {
     .map(p => `<div class="score-row"><span>${escHtml(p.name)}</span><span>${p.score}pt</span></div>`)
     .join('');
 
-  overlayContent.innerHTML = data.winnerId
-    ? `<div class="overlay-emoji">🎉</div>
-       <div class="overlay-title">正解！</div>
-       <div class="overlay-word">${escHtml(data.word)}</div>
-       <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>
-       <div class="overlay-winner">${escHtml(data.winnerName)} の勝ち！</div>
-       <div class="score-list">${scoreHtml}</div>`
-    : `<div class="overlay-emoji">⏰</div>
-       <div class="overlay-title">時間切れ！</div>
-       <div class="overlay-word">${escHtml(data.word)}</div>
-       <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>
-       <div class="score-list">${scoreHtml}</div>`;
+  const isAllCorrect = data.reason === 'all';
+  overlayContent.innerHTML = `
+    <div class="overlay-emoji">${isAllCorrect ? '🎊' : '⏰'}</div>
+    <div class="overlay-title">${isAllCorrect ? '全員正解！' : '時間切れ！'}</div>
+    <div class="overlay-word">${escHtml(data.word)}</div>
+    <div class="overlay-reading">よみかた：${escHtml(data.reading)}</div>
+    <div class="score-list">${scoreHtml}</div>`;
 
   roundOverlay.classList.remove('hidden');
 

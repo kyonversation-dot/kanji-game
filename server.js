@@ -24,8 +24,9 @@ const state = {
   timer: null,
   timeLeft: 0,
   customWords: [],  // 今週の漢字リスト（空のときはランダム）
-  lastWordKanji: null, // 直前の漢字（連続防止）
-  timerStarted: false, // タイマーが始まったか
+  lastWordKanji: null,    // 直前の漢字（連続防止）
+  timerStarted: false,   // タイマーが始まったか
+  correctGuessers: [],   // 正解済みのsocketIdリスト
   startTimeout: null,  // 自動スタート用タイムアウト
 };
 
@@ -109,6 +110,7 @@ function startRound() {
 
   state.phase = 'drawing';
   state.timerStarted = false;
+  state.correctGuessers = [];
   state.currentWord = getWordForRound();
   const drawerId = getDrawerId();
 
@@ -131,7 +133,7 @@ function startRound() {
   state.startTimeout = setTimeout(beginTimer, 10000);
 }
 
-function endRound(winnerId) {
+function endRound(reason) {
   clearInterval(state.timer);
   clearTimeout(state.startTimeout);
   state.phase = 'roundEnd';
@@ -139,8 +141,7 @@ function endRound(winnerId) {
   io.emit('roundEnd', {
     word: state.currentWord.kanji,
     reading: state.currentWord.readings[0] || state.currentWord.kanji,
-    winnerId,
-    winnerName: winnerId ? state.players[winnerId]?.name : null,
+    reason, // 'all'=全員正解 / null=時間切れ
     players: getPlayerList(),
   });
 
@@ -196,23 +197,34 @@ io.on('connection', (socket) => {
 
   socket.on('guess', ({ text }) => {
     if (!text || !text.trim()) return;
-    if (socket.id === getDrawerId()) return;
+    const drawerId = getDrawerId();
+    if (socket.id === drawerId) return;
+    if (state.correctGuessers.includes(socket.id)) return; // 既に正解済み
 
     const playerName = state.players[socket.id]?.name || '?';
-    // 答えはチャットに出さない。「○○が答えました」だけ全員に見せる
     io.emit('chat', { system: true, text: `${playerName} が答えました` });
 
     if (checkGuess(text)) {
-      const drawerId = getDrawerId();
-      // スピードボーナス：残り時間が多いほど高得点（1〜6pt）
-      const points = Math.max(1, Math.ceil(state.timeLeft / 10));
+      // 順位ボーナス：1位=6pt、2位=5pt、3位=4pt…（最低1pt）
+      const rank = state.correctGuessers.length; // 0=1位, 1=2位…
+      const points = Math.max(1, 6 - rank);
       state.players[socket.id].score += points;
+      state.correctGuessers.push(socket.id);
+
+      // 描いた人は正解者1人につき+1pt
       if (drawerId && state.players[drawerId]) {
-        state.players[drawerId].score += 2;
+        state.players[drawerId].score += 1;
       }
+
       io.emit('playerList', getPlayerList());
       io.emit('correctGuess', { name: playerName, points });
-      endRound(socket.id);
+      socket.emit('yourGuessCorrect', { points }); // 正解者本人に通知
+
+      // 全員（描く人以外）が正解したら終了
+      const nonDrawers = state.order.filter(id => id !== drawerId);
+      if (nonDrawers.length > 0 && nonDrawers.every(id => state.correctGuessers.includes(id))) {
+        endRound('all');
+      }
     }
   });
 

@@ -384,6 +384,16 @@ body {
 .overlay-winner { font-size: 1rem; color: #5c4bc2; font-weight: bold; margin-bottom: 16px; }
 .overlay-countdown { margin-top: 16px; color: #aaa; font-size: 0.9rem; }
 
+.word-reveal-text {
+  font-size: 3rem;
+  font-weight: bold;
+  color: #5c4bc2;
+  margin: 12px 0;
+  letter-spacing: 6px;
+}
+
+.overlay-subtitle { font-size: 0.9rem; color: #888; margin-top: 4px; }
+
 .score-list {
   margin-top: 12px;
   border-top: 1px solid #eee;

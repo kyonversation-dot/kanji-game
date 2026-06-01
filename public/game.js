@@ -37,9 +37,12 @@ const guessInput    = document.getElementById('guess-input');
 const guessBtn      = document.getElementById('guess-btn');
 const playerList    = document.getElementById('player-list');
 const chatLog       = document.getElementById('chat-log');
-const roundOverlay  = document.getElementById('round-overlay');
-const overlayContent= document.getElementById('overlay-content');
-const overlayCountdown = document.getElementById('overlay-countdown');
+const roundOverlay      = document.getElementById('round-overlay');
+const overlayContent    = document.getElementById('overlay-content');
+const overlayCountdown  = document.getElementById('overlay-countdown');
+const wordRevealOverlay = document.getElementById('word-reveal-overlay');
+const revealWord        = document.getElementById('reveal-word');
+const revealBtn         = document.getElementById('reveal-btn');
 
 // ======= キャンバス初期化 =======
 function initCanvas() {
@@ -291,11 +294,17 @@ socket.on('roundStart', (data) => {
   }
 });
 
+revealBtn.addEventListener('click', () => {
+  wordRevealOverlay.classList.add('hidden');
+});
+
 socket.on('yourWord', ({ word }) => {
   wordDisplay.classList.remove('hidden');
   wordText.textContent = word;
-  // スマホでも必ず見えるようにヘッダーにも表示
   statusText.textContent = `✏️ お題：${word}　← 漢字で書いてね`;
+  // 大きなポップアップでお題を表示（スマホでも確実に見える）
+  revealWord.textContent = word;
+  wordRevealOverlay.classList.remove('hidden');
 });
 
 socket.on('draw', (data) => {

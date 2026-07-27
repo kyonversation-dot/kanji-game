@@ -37,6 +37,67 @@ function toHiragana(str) {
   );
 }
 
+// ローマ字→ひらがな変換（日本語入力できない子向け・答え合わせ用）
+const ROMAJI_TABLE = {
+  kya:'きゃ',kyu:'きゅ',kyo:'きょ',gya:'ぎゃ',gyu:'ぎゅ',gyo:'ぎょ',
+  sha:'しゃ',shu:'しゅ',sho:'しょ',sya:'しゃ',syu:'しゅ',syo:'しょ',
+  cha:'ちゃ',chu:'ちゅ',cho:'ちょ',tya:'ちゃ',tyu:'ちゅ',tyo:'ちょ',
+  ja:'じゃ',ju:'じゅ',jo:'じょ',jya:'じゃ',jyu:'じゅ',jyo:'じょ',zya:'じゃ',zyu:'じゅ',zyo:'じょ',
+  nya:'にゃ',nyu:'にゅ',nyo:'にょ',hya:'ひゃ',hyu:'ひゅ',hyo:'ひょ',
+  bya:'びゃ',byu:'びゅ',byo:'びょ',pya:'ぴゃ',pyu:'ぴゅ',pyo:'ぴょ',
+  mya:'みゃ',myu:'みゅ',myo:'みょ',rya:'りゃ',ryu:'りゅ',ryo:'りょ',
+  shi:'し',chi:'ち',tsu:'つ',
+  ka:'か',ki:'き',ku:'く',ke:'け',ko:'こ',
+  sa:'さ',si:'し',su:'す',se:'せ',so:'そ',
+  ta:'た',ti:'ち',tu:'つ',te:'て',to:'と',
+  na:'な',ni:'に',nu:'ぬ',ne:'ね',no:'の',
+  ha:'は',hi:'ひ',fu:'ふ',hu:'ふ',he:'へ',ho:'ほ',
+  ma:'ま',mi:'み',mu:'む',me:'め',mo:'も',
+  ya:'や',yu:'ゆ',yo:'よ',
+  ra:'ら',ri:'り',ru:'る',re:'れ',ro:'ろ',
+  wa:'わ',wo:'を',
+  ga:'が',gi:'ぎ',gu:'ぐ',ge:'げ',go:'ご',
+  za:'ざ',zi:'じ',ji:'じ',zu:'ず',ze:'ぜ',zo:'ぞ',
+  da:'だ',di:'ぢ',du:'づ',de:'で',do:'ど',
+  ba:'ば',bi:'び',bu:'ぶ',be:'べ',bo:'ぼ',
+  pa:'ぱ',pi:'ぴ',pu:'ぷ',pe:'ぺ',po:'ぽ',
+  fa:'ふぁ',fi:'ふぃ',fe:'ふぇ',fo:'ふぉ',
+  a:'あ',i:'い',u:'う',e:'え',o:'お',
+};
+function romajiToHiragana(input) {
+  const str = input.toLowerCase().replace(/[\s　]/g, '');
+  let result = '';
+  let i = 0;
+  while (i < str.length) {
+    const c = str[i];
+    // 促音（子音の連続 kk / tt など）→ っ
+    if (c === str[i + 1] && !'aiueon'.includes(c) && /[a-z]/.test(c)) {
+      result += 'っ';
+      i++;
+      continue;
+    }
+    // 撥音 n（母音・y が続かない場合）→ ん
+    if (c === 'n' && (str[i + 1] === undefined || !'aiueoy'.includes(str[i + 1]))) {
+      result += 'ん';
+      i++;
+      continue;
+    }
+    // 3文字→2文字→1文字の順で最長一致
+    let matched = false;
+    for (let len = 3; len >= 1; len--) {
+      const chunk = str.substr(i, len);
+      if (ROMAJI_TABLE[chunk]) {
+        result += ROMAJI_TABLE[chunk];
+        i += len;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) { result += c; i++; } // 変換できない文字はそのまま
+  }
+  return result;
+}
+
 // カスタムリストの文字列をパース（漢字 訓読み 音読み）
 function parseCustomWords(text) {
   return text
@@ -160,11 +221,13 @@ function endRound(reason) {
 
 function checkGuess(guess) {
   if (!state.currentWord || state.phase !== 'drawing') return false;
-  const g = toHiragana(guess.trim());
+  const raw = toHiragana(guess.trim());
+  const romaji = romajiToHiragana(guess.trim()); // ローマ字入力にも対応
   const kanji = state.currentWord.kanji;
   const readings = (state.currentWord.readings || []).map(toHiragana);
-  const matched = g === kanji || readings.includes(g);
-  console.log(`[GUESS] 入力:"${g}" 正解:"${kanji}" 読み:${JSON.stringify(readings)} 結果:${matched}`);
+  const candidates = [raw, romaji];
+  const matched = candidates.some(g => g === kanji || readings.includes(g));
+  console.log(`[GUESS] 入力:"${raw}" ローマ字変換:"${romaji}" 正解:"${kanji}" 読み:${JSON.stringify(readings)} 結果:${matched}`);
   return matched;
 }
 

@@ -300,7 +300,7 @@ socket.on('roundStart', (data) => {
     myGuessedCorrectly = false;
     guessInput.disabled = false;
     guessBtn.disabled = false;
-    guessInput.placeholder = 'こたえを入れてね...';
+    guessInput.placeholder = 'こたえを入れてね（ローマ字でもOK）';
     guessInput.focus();
   }
 });

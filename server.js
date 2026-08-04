@@ -78,8 +78,13 @@ function romajiToHiragana(input) {
     }
     // 撥音 n（母音・y が続かない場合）→ ん
     if (c === 'n' && (str[i + 1] === undefined || !'aiueoy'.includes(str[i + 1]))) {
+      // IME癖の「nn」はまとめて1つの「ん」（直後に母音/yが続くときは onna=おんな のように別音節）
+      if (str[i + 1] === 'n' && (str[i + 2] === undefined || !'aiueoy'.includes(str[i + 2]))) {
+        i += 2;
+      } else {
+        i++;
+      }
       result += 'ん';
-      i++;
       continue;
     }
     // 3文字→2文字→1文字の順で最長一致
@@ -219,6 +224,13 @@ function endRound(reason) {
   }, ROUND_END_WAIT);
 }
 
+// 長音の省略を吸収（kyo=きょう・se=せい など。お段+う／え段+い を短い形に畳んで比較）
+function relaxLongVowels(s) {
+  return s
+    .replace(/([おこそとのほもよろをごぞどぼぽょ])う/g, '$1')
+    .replace(/([えけせてねへめれげぜでべぺぇ])い/g, '$1');
+}
+
 function checkGuess(guess) {
   if (!state.currentWord || state.phase !== 'drawing') return false;
   const raw = toHiragana(guess.trim());
@@ -226,7 +238,9 @@ function checkGuess(guess) {
   const kanji = state.currentWord.kanji;
   const readings = (state.currentWord.readings || []).map(toHiragana);
   const candidates = [raw, romaji];
-  const matched = candidates.some(g => g === kanji || readings.includes(g));
+  const readingsRelaxed = readings.map(relaxLongVowels);
+  const matched = candidates.some(g => g === kanji || readings.includes(g))
+    || candidates.some(g => readingsRelaxed.includes(relaxLongVowels(g)));
   console.log(`[GUESS] 入力:"${raw}" ローマ字変換:"${romaji}" 正解:"${kanji}" 読み:${JSON.stringify(readings)} 結果:${matched}`);
   return matched;
 }

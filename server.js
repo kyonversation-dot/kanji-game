@@ -28,7 +28,12 @@ const state = {
   timerStarted: false,   // タイマーが始まったか
   correctGuessers: [],   // 正解済みのsocketIdリスト
   startTimeout: null,  // 自動スタート用タイムアウト
+  strokes: [],         // 今のラウンドの線（復帰した人への巻き戻し用）
+  tokens: {},          // 復帰用トークン -> socketId（スマホの瞬断で別人にならないように）
 };
+
+const RECONNECT_GRACE = 60000;  // 瞬断から復帰できる猶予(ms)
+const MAX_STROKES = 20000;      // 線バッファの上限（メモリ保護）
 
 // カタカナ→ひらがな変換
 function toHiragana(str) {
@@ -174,9 +179,17 @@ function startRound() {
     return;
   }
 
+  // 瞬断中の人には描く番を回さない
+  let skipGuard = 0;
+  while (state.players[getDrawerId()]?.offline && skipGuard < state.order.length) {
+    state.drawerIdx++;
+    skipGuard++;
+  }
+
   state.phase = 'drawing';
   state.timerStarted = false;
   state.correctGuessers = [];
+  state.strokes = [];
   state.currentWord = getWordForRound();
   const drawerId = getDrawerId();
 
@@ -189,14 +202,37 @@ function startRound() {
   });
 
   // お絵かき担当にだけ漢字・訓読み・音読みを送る
-  io.to(drawerId).emit('yourWord', {
-    kanji:   state.currentWord.kanji,
-    kunyomi: state.currentWord.kunyomi || (state.currentWord.readings[0] || ''),
-    onyomi:  state.currentWord.onyomi  || '',
-  });
+  io.to(drawerId).emit('yourWord', yourWordPayload());
 
   // 10秒後に描く人がボタンを押さなくても自動でタイマー開始
   state.startTimeout = setTimeout(beginTimer, 10000);
+}
+
+function yourWordPayload() {
+  return {
+    kanji:   state.currentWord.kanji,
+    kunyomi: state.currentWord.kunyomi || (state.currentWord.readings[0] || ''),
+    onyomi:  state.currentWord.onyomi  || '',
+  };
+}
+
+// 途中参加・復帰した人に今のラウンドをそのまま見せる
+function sendRoundSnapshot(socket) {
+  if (state.phase === 'waiting') {
+    socket.emit('waiting');
+    return;
+  }
+  if (state.phase !== 'drawing') return; // roundEnd中は数秒後のroundStartに任せる
+  const drawerId = getDrawerId();
+  socket.emit('roundStart', {
+    drawerId,
+    drawerName: state.players[drawerId]?.name,
+    timeLeft: state.timeLeft,
+    charCount: state.currentWord.kanji.length,
+  });
+  socket.emit('canvasState', { strokes: state.strokes });
+  if (state.timerStarted) socket.emit('timerStarted', { timeLeft: state.timeLeft });
+  if (socket.id === drawerId) socket.emit('yourWord', yourWordPayload());
 }
 
 function endRound(reason) {
@@ -246,15 +282,37 @@ function checkGuess(guess) {
 }
 
 io.on('connection', (socket) => {
-  socket.on('join', ({ name }) => {
+  socket.on('join', ({ name, token }) => {
     if (!name || name.trim() === '') return;
+
+    // 復帰＝同じトークンの席が残っていれば、名前・スコア・席順ごと座り直す
+    const oldId = token && state.tokens[token];
+    if (oldId && state.players[oldId] && oldId !== socket.id) {
+      const player = state.players[oldId];
+      clearTimeout(player.removeTimer);
+      delete state.players[oldId];
+      state.players[socket.id] = { name: player.name, score: player.score };
+      state.order = state.order.map(id => (id === oldId ? socket.id : id));
+      state.correctGuessers = state.correctGuessers.map(id => (id === oldId ? socket.id : id));
+      state.tokens[token] = socket.id;
+
+      socket.emit('joined', { socketId: socket.id });
+      io.emit('playerList', getPlayerList());
+      sendRoundSnapshot(socket);
+      if (state.order.length >= 2 && state.phase === 'waiting') {
+        setTimeout(startRound, 2000);
+      }
+      return;
+    }
 
     state.players[socket.id] = { name: name.trim(), score: 0 };
     state.order.push(socket.id);
+    if (token) state.tokens[token] = socket.id;
 
     io.emit('playerList', getPlayerList());
     socket.emit('joined', { socketId: socket.id });
     io.emit('chat', { system: true, text: `${name.trim()} が参加しました！` });
+    sendRoundSnapshot(socket); // 途中参加でも今のラウンドが見える
 
     if (state.order.length >= 2 && state.phase === 'waiting') {
       setTimeout(startRound, 2000);
@@ -262,13 +320,15 @@ io.on('connection', (socket) => {
   });
 
   socket.on('draw', (data) => {
-    if (socket.id === getDrawerId()) {
+    if (socket.id === getDrawerId() && state.phase === 'drawing') {
+      if (state.strokes.length < MAX_STROKES) state.strokes.push(data);
       socket.broadcast.emit('draw', data);
     }
   });
 
   socket.on('clearCanvas', () => {
     if (socket.id === getDrawerId()) {
+      state.strokes = [];
       io.emit('clearCanvas');
     }
   });
@@ -321,29 +381,44 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const name = state.players[socket.id]?.name;
-    const wasDrawer = socket.id === getDrawerId();
-
-    delete state.players[socket.id];
-    state.order = state.order.filter(id => id !== socket.id);
-
-    if (state.order.length > 0) {
-      io.emit('playerList', getPlayerList());
-      if (name) {
-        io.emit('chat', { system: true, text: `${name} が退出しました` });
-      }
-    }
-
-    if (state.order.length < 2) {
-      clearInterval(state.timer);
-      state.phase = 'waiting';
-      io.emit('waiting');
-    } else if (wasDrawer && state.phase === 'drawing') {
-      clearInterval(state.timer);
-      endRound(null);
-    }
+    // 瞬断（スマホの画面消灯・アプリ切替・回線揺れ）を即退出にしない＝猶予の間は席とスコアを残す
+    const player = state.players[socket.id];
+    if (!player) return;
+    player.offline = true;
+    player.removeTimer = setTimeout(() => removePlayer(socket.id), RECONNECT_GRACE);
   });
 });
+
+// 猶予が切れた人を本当に退出させる
+function removePlayer(id) {
+  const player = state.players[id];
+  if (!player) return;
+  const name = player.name;
+  const wasDrawer = id === getDrawerId();
+
+  delete state.players[id];
+  state.order = state.order.filter(x => x !== id);
+  for (const [tok, sid] of Object.entries(state.tokens)) {
+    if (sid === id) delete state.tokens[tok];
+  }
+
+  if (state.order.length > 0) {
+    io.emit('playerList', getPlayerList());
+    if (name) {
+      io.emit('chat', { system: true, text: `${name} が退出しました` });
+    }
+  }
+
+  if (state.order.length < 2) {
+    clearInterval(state.timer);
+    clearTimeout(state.startTimeout);
+    state.phase = 'waiting';
+    io.emit('waiting');
+  } else if (wasDrawer && state.phase === 'drawing') {
+    clearInterval(state.timer);
+    endRound(null);
+  }
+}
 
 // ローカルIPアドレスを表示
 function getLocalIP() {

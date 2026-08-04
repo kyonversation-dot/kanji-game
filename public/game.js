@@ -3,6 +3,16 @@ const ROUND_TIME = 50;
 
 // ======= 状態 =======
 let mySocketId = null;
+let myName = null;
+// 復帰用トークン＝スマホの瞬断（画面消灯・アプリ切替）で別人扱いされないための身分証
+const myToken = (() => {
+  let t = localStorage.getItem('kanji-game-token');
+  if (!t) {
+    t = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('kanji-game-token', t);
+  }
+  return t;
+})();
 let drawerId = null;
 let myGuessedCorrectly = false;
 let currentColor = '#111111';
@@ -219,8 +229,14 @@ nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinGame(); 
 function joinGame() {
   const name = nameInput.value.trim();
   if (!name) { nameInput.focus(); return; }
-  socket.emit('join', { name });
+  myName = name;
+  socket.emit('join', { name, token: myToken });
 }
+
+// 瞬断から自動復帰＝再接続できたら同じ名前・トークンで座り直す
+socket.on('connect', () => {
+  if (myName) socket.emit('join', { name: myName, token: myToken });
+});
 
 // ======= 答え送信 =======
 guessBtn.addEventListener('click', sendGuess);
@@ -334,6 +350,14 @@ socket.on('yourWord', ({ kanji, kunyomi, onyomi }) => {
 
 socket.on('draw', (data) => {
   applyDrawEvent(data);
+});
+
+// 復帰・途中参加した人への線の巻き戻し
+socket.on('canvasState', ({ strokes }) => {
+  clearLocalCanvas();
+  lastPoint = null;
+  (strokes || []).forEach(applyDrawEvent);
+  lastPoint = null;
 });
 
 socket.on('clearCanvas', () => {

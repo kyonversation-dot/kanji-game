@@ -123,7 +123,10 @@ function parseCustomWords(text) {
       const readings = [];
       // ひらがな・ことばの行（はな flower / へそ belly button）は、うしろ全部を英語の答えとしても持つ
       const rest = parts.slice(1).join(' ');
-      if (rest && /[a-zA-Z]/.test(rest)) readings.push(rest);
+      if (rest && /[a-zA-Z]/.test(rest)) {
+        readings.push(rest);
+        rest.split(/[\s\/]+/).filter(t => /[a-zA-Z]/.test(t)).forEach(t => readings.push(t)); // hana/hasi・flower を1つずつ
+      }
       if (kunyomi) readings.push(toHiragana(kunyomi));
       if (onyomi)  readings.push(toHiragana(onyomi));
       if (readings.length === 0 && readingMap[kanji]) {

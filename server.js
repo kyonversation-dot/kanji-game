@@ -121,6 +121,9 @@ function parseCustomWords(text) {
       const onyomi   = parts[2] || '';
       // 正解判定用：全読みをひらがなで保持
       const readings = [];
+      // ひらがな・ことばの行（はな flower / へそ belly button）は、うしろ全部を英語の答えとしても持つ
+      const rest = parts.slice(1).join(' ');
+      if (rest && /[a-zA-Z]/.test(rest)) readings.push(rest);
       if (kunyomi) readings.push(toHiragana(kunyomi));
       if (onyomi)  readings.push(toHiragana(onyomi));
       if (readings.length === 0 && readingMap[kanji]) {
@@ -260,23 +263,63 @@ function endRound(reason) {
   }, ROUND_END_WAIT);
 }
 
-// 長音の省略を吸収（kyo=きょう・se=せい など。お段+う／え段+い を短い形に畳んで比較）
+// 長音・のばし方の違いを吸収（kyo/kyou/kyoo/kyō・se/sei/see・hikoki/hikouki/hikooki）
+const KANA_VOWEL = {};
+[['あかさたなはまやらわがざだばぱゃぁ','あ'],['いきしちにひみりぎじぢびぴぃ','い'],
+ ['うくすつぬふむゆるぐずづぶぷゅぅ','う'],['えけせてねへめれげぜでべぺぇ','え'],
+ ['おこそとのほもよろをごぞどぼぽょぉ','お']].forEach(([chars, v]) => {
+  for (const c of chars) KANA_VOWEL[c] = v;
+});
 function relaxLongVowels(s) {
-  return s
-    .replace(/([おこそとのほもよろをごぞどぼぽょ])う/g, '$1')
-    .replace(/([えけせてねへめれげぜでべぺぇ])い/g, '$1');
+  let out = '';
+  for (const c of s) {
+    const prev = out[out.length - 1];
+    const pv = KANA_VOWEL[prev];
+    if (pv && 'あいうえお'.includes(c) &&
+        (c === pv || (pv === 'お' && c === 'う') || (pv === 'え' && c === 'い'))) continue;
+    out += c;
+  }
+  return out;
 }
+
+// ローマ字の書き方の違いをそろえる（ā→a・ō→o・n'→n・l→r・v→b・c→k など）
+function normalizeRomaji(s) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // ā ō ū の棒を取る
+    .replace(/[\s　'’\-\.]/g, '')
+    .replace(/m(?=[bpm])/g, 'n')   // shimbun → shinbun
+    .replace(/tch/g, 'cch')        // matcha
+    .replace(/dzu/g, 'zu').replace(/dji/g, 'ji')
+    .replace(/l/g, 'r').replace(/v/g, 'b')
+    .replace(/c(?!h)/g, 'k')
+    .replace(/x/g, 'ks');
+}
+
+// 英語の答えをそろえる（大文字・空白・a/the・複数形の s）
+function normalizeEnglish(s) {
+  return s.toLowerCase()
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\b(a|an|the|some)\b/g, ' ')
+    .replace(/\s+/g, '')
+    .replace(/(es|s)$/, '');
+}
+
+// ひらがな1字の別の読み（は=wa・へ=e・を=o）
+const KANA_ALT = { 'は':['わ'], 'へ':['え'], 'を':['お'], 'ぢ':['じ'], 'づ':['ず'] };
 
 function checkGuess(guess) {
   if (!state.currentWord || state.phase !== 'drawing') return false;
   const raw = toHiragana(guess.trim());
-  const romaji = romajiToHiragana(guess.trim()); // ローマ字入力にも対応
+  const romaji = romajiToHiragana(normalizeRomaji(guess.trim())); // ローマ字入力にも対応
   const kanji = state.currentWord.kanji;
   const readings = (state.currentWord.readings || []).map(toHiragana);
+  const targets = [kanji, ...readings, ...(KANA_ALT[kanji] || [])];
   const candidates = [raw, romaji];
-  const readingsRelaxed = readings.map(relaxLongVowels);
-  const matched = candidates.some(g => g === kanji || readings.includes(g))
-    || candidates.some(g => readingsRelaxed.includes(relaxLongVowels(g)));
+  const relaxed = targets.map(relaxLongVowels);
+  const eng = normalizeEnglish(guess);
+  const matched = candidates.some(g => targets.includes(g))
+    || candidates.some(g => relaxed.includes(relaxLongVowels(g)))
+    || (eng.length > 0 && readings.some(r => /[a-z]/i.test(r) && normalizeEnglish(r) === eng));
   console.log(`[GUESS] 入力:"${raw}" ローマ字変換:"${romaji}" 正解:"${kanji}" 読み:${JSON.stringify(readings)} 結果:${matched}`);
   return matched;
 }
